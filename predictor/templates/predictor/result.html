@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Prediction Result{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow-sm text-center">
+        <div class="card-body">
+          <h3 class="card-title mb-3">Estimated Price</h3>
+          <p class="display-6 fw-bold">${{ price|floatformat:2 }}</p>
+          <p class="text-muted">This is a simple estimate based on the input features.</p>
+
+          <a href="/" class="btn btn-outline-primary mt-3">Make another prediction</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

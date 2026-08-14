@@ -1,0 +1,8 @@
+<form method="POST">
+  {% csrf_token %}
+  Area: <input type="text" name="area"><br>
+  Bedrooms: <input type="text" name="bedrooms"><br>
+  Bathrooms: <input type="text" name="bathrooms"><br>
+  Age: <input type="text" name="age"><br>
+  <button type="submit">Predict</button>
+</form>
