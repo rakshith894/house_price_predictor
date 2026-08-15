@@ -17,18 +17,39 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def get_allowed_hosts():
+    raw = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
+    hosts = [
+        '127.0.0.1',
+        'localhost',
+    ]
+    if raw:
+        hosts.extend(host.strip() for host in raw.split(',') if host.strip())
+    render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    if render_hostname:
+        hosts.append(render_hostname)
+    return hosts
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-rjs9u=b0uq2rlvtk5bs7wvze3nj$-n*h!4ws@)a=ht(kqcxeir'
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    '8p4me2$6#v2d9!9fqs6xw@k5n1m7r*e3h0u4a7c6p9y1z2@!#%$^&*qwVsR6kL9dF2pE5bH7mN1zX4',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true','1','yes')
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-# Allow configuration via environment variable, or use RENDER_EXTERNAL_HOSTNAME when available.
-_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS') or os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-ALLOWED_HOSTS = _hosts.split(',') if _hosts else []
+ALLOWED_HOSTS = get_allowed_hosts()
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+    'https://*.render.com',
+]
+if os.environ.get('RENDER_EXTERNAL_HOSTNAME'):
+    CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}")
 
 
 # Application definition
@@ -46,6 +67,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -77,12 +99,18 @@ WSGI_APPLICATION = 'mlproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.environ.get('DATABASE_URL'):
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(default=os.environ['DATABASE_URL'], conn_max_age=600)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -119,19 +147,40 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Static files directories (for development)
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+IS_RENDER_DEPLOYMENT = bool(os.environ.get('RENDER_EXTERNAL_HOSTNAME'))
+SECURE_SSL_REDIRECT = not DEBUG and IS_RENDER_DEPLOYMENT
+SECURE_HSTS_SECONDS = 31536000 if (not DEBUG and IS_RENDER_DEPLOYMENT) else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG and IS_RENDER_DEPLOYMENT
+SECURE_HSTS_PRELOAD = not DEBUG and IS_RENDER_DEPLOYMENT
+SESSION_COOKIE_SECURE = not DEBUG and IS_RENDER_DEPLOYMENT
+CSRF_COOKIE_SECURE = not DEBUG and IS_RENDER_DEPLOYMENT
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@example.com')

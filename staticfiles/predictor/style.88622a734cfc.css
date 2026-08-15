@@ -1,0 +1,7 @@
+/* Small custom styles to improve visual polish */
+body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+.navbar-brand { color: #0d6efd; }
+.card { border-radius: 12px; }
+.btn-primary { background: linear-gradient(90deg,#0d6efd,#6610f2); border: none; }
+.display-6 { font-size: 2.25rem; }
+footer { position: relative; }
